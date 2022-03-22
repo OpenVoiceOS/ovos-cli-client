@@ -1,0 +1,3 @@
+recursive-include ovos_cli_client/ *
+include CHANGELOG.md
+include LICENSE
