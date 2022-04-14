@@ -2,6 +2,8 @@
 
 mycroft-core cli client extracted into a standalone component
 
+![](ovos-cli.png)
+
 ## Install
 
 ```bash
