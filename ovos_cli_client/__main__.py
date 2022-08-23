@@ -17,8 +17,7 @@ import io
 import os.path
 import signal
 import sys
-
-from ovos_utils.configuration import read_mycroft_config
+from ovos_config import Configuration
 from ovos_utils.signal import get_ipc_directory
 
 from ovos_cli_client.text_client import (
@@ -43,10 +42,7 @@ sys.excepthook = custom_except_hook  # noqa
 
 def main():
     # Monitor system logs
-    try:
-        config = read_mycroft_config()
-    except:
-        config = {}
+    config = Configuration()
 
     if 'log_dir' not in config:
         config["log_dir"] = "/var/log/mycroft"

@@ -21,13 +21,13 @@ import os.path
 import sys
 import textwrap
 import time
+from math import ceil
+from os.path import isfile
 from threading import Thread, Lock
 
-from math import ceil
 from mycroft_bus_client import MessageBusClient, Message
+from ovos_config.config import get_xdg_config_locations, get_xdg_config_save_path, Configuration
 from ovos_plugin_manager.templates.tts import TTS
-from ovos_utils.configuration import is_using_xdg, get_xdg_config_locations, get_xdg_config_save_path, \
-    read_mycroft_config
 from ovos_utils.log import LOG
 
 from ovos_cli_client.gui_server import start_qml_gui
@@ -39,7 +39,8 @@ preferred_encoding = locale.getpreferredencoding()
 
 bSimple = False
 bus = None  # Mycroft messagebus connection
-config = {}  # Will be populated by the Mycroft configuration
+config = Configuration()
+config_file = None  # mycroft_cli.conf
 event_thread = None
 history = []
 chat = []  # chat history, oldest at the lowest index
@@ -147,11 +148,7 @@ def load_mycroft_config(bus=None):
     """
     if bus:
         LOG.warning("bus argument is DEPRECATED!")
-    try:
-        config = read_mycroft_config()
-    except:
-        config = {}
-    return config
+    return Configuration()
 
 
 def connect_to_mycroft():
@@ -161,9 +158,8 @@ def connect_to_mycroft():
         Sets the bus and config global variables
     """
     global bus
-    global config
     bus = connect_to_messagebus()
-    config = load_mycroft_config()
+    Configuration.set_config_update_handlers(bus)
 
 
 def load_settings():
@@ -172,15 +168,12 @@ def load_settings():
     global show_last_key
     global max_log_lines
     global show_meter
-
-    config_file = None
+    global config_file
 
     # Old location
     path = os.path.join(os.path.expanduser("~"), ".mycroft_cli.conf")
 
-    if not is_using_xdg():
-        config_file = path
-    elif os.path.isfile(path):
+    if os.path.isfile(path):
         config_file = path
 
     # Check XDG_CONFIG_DIR
@@ -194,6 +187,9 @@ def load_settings():
     # Check /etc/mycroft
     if config_file is None:
         config_file = os.path.join("/etc/mycroft", filename)
+
+    if not isfile(config_file):
+        config_file = os.path.join(get_xdg_config_save_path(), filename)
 
     try:
         with io.open(config_file, 'r') as f:
@@ -214,20 +210,14 @@ def load_settings():
 
 
 def save_settings():
+    global config_file
+
     config = {}
     config["filters"] = log_filters
     config["cy_chat_area"] = cy_chat_area
     config["show_last_key"] = show_last_key
     config["max_log_lines"] = max_log_lines
     config["show_meter"] = show_meter
-
-    # Old location
-    path = os.path.join(os.path.expanduser("~"), ".mycroft_cli.conf")
-
-    if not is_using_xdg():
-        config_file = path
-    else:
-        config_file = os.path.join(get_xdg_config_save_path(), filename)
 
     with io.open(config_file, 'w') as f:
         f.write(str(json.dumps(config, ensure_ascii=False)))
