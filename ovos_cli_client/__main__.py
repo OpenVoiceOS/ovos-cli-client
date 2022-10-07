@@ -50,11 +50,7 @@ def main():
     legacy_path = "/var/log/mycroft"
 
     if 'log_dir' not in config:
-        new_path = f"{xdg_state_home()}/{get_xdg_base()}/logs"
-        if not exists(new_path) and exists(legacy_path):
-            config["log_dir"] = legacy_path
-        else:
-            config["log_dir"] = new_path
+        config["log_dir"] = f"{xdg_state_home()}/{get_xdg_base()}/logs"
 
     log_dir = os.path.expanduser(config['log_dir'])
     for f in os.listdir(log_dir):
