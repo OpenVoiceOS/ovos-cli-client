@@ -17,14 +17,17 @@ import io
 import os.path
 import signal
 import sys
+from os.path import exists
 from ovos_config import Configuration
 from ovos_utils.signal import get_ipc_directory
-
+from ovos_utils.log import LOG
 from ovos_cli_client.text_client import (
     load_settings, save_settings, simple_cli, gui_main,
     start_log_monitor, start_mic_monitor, connect_to_mycroft,
     ctrl_c_handler
 )
+from ovos_config.meta import get_xdg_base
+from ovos_utils.xdg_utils import xdg_state_home
 
 sys.stdout = io.StringIO()
 sys.stderr = io.StringIO()
@@ -44,14 +47,30 @@ def main():
     # Monitor system logs
     config = Configuration()
 
+    legacy_path = "/var/log/mycroft"
+
     if 'log_dir' not in config:
-        config["log_dir"] = "/var/log/mycroft"
+        new_path = f"{xdg_state_home()}/{get_xdg_base()}/logs"
+        if not exists(new_path) and exists(legacy_path):
+            config["log_dir"] = legacy_path
+        else:
+            config["log_dir"] = new_path
 
     log_dir = os.path.expanduser(config['log_dir'])
     for f in os.listdir(log_dir):
         if not f.endswith(".log"):
             continue
         start_log_monitor(os.path.join(log_dir, f))
+
+    # also monitor legacy path for compat
+    if log_dir != legacy_path and exists(legacy_path):
+        LOG.warning(
+            f"this installation seems to also contain logs in the legacy directory {legacy_path}, "
+            f"please start using {log_dir}")
+        for f in os.listdir(legacy_path):
+            if not f.endswith(".log"):
+                continue
+            start_log_monitor(os.path.join(legacy_path, f))
 
     # Monitor IPC file containing microphone level info
     start_mic_monitor(os.path.join(get_ipc_directory(), "mic_level"))
