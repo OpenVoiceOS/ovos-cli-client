@@ -16,7 +16,7 @@ setup(
     version="0.0.1",
     packages=['ovos_cli_client'],
     url='https://github.com/OpenVoiceOS/ovos_cli_client',
-    install_requires=["ovos_utils>=0.0.25a8"],
+    install_requires=["ovos_utils>=0.0.25a9"],
     package_data={'': package_files('ovos_cli_client')},
     include_package_data=True,
     license='Apache',
