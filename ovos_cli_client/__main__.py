@@ -49,10 +49,17 @@ def main():
 
     legacy_path = "/var/log/mycroft"
 
-    if 'log_dir' not in config:
-        config["log_dir"] = f"{xdg_state_home()}/{get_xdg_base()}"
 
-    log_dir = os.path.expanduser(config['log_dir'])
+    log_dir = f"{xdg_state_home()}/{get_xdg_base()}"
+
+    if 'logs' in config and 'path' in config["logs"]:
+        log_dir = config["logs"]["path"]
+    if 'log_dir' in config:
+        LOG.warning("The variable 'log_dir' in the cli config is deprecated. Please use 'logs.path'.")
+        log_dir = config["log_dir"]
+
+
+    log_dir = os.path.expanduser(log_dir)
     for f in os.listdir(log_dir):
         if not f.endswith(".log"):
             continue
