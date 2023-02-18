@@ -22,8 +22,9 @@ import sys
 import textwrap
 import time
 from threading import Thread, Lock
-
 from math import ceil
+
+import mycroft
 from mycroft_bus_client import MessageBusClient, Message
 from ovos_plugin_manager.templates.tts import TTS
 from ovos_utils.configuration import is_using_xdg, get_xdg_config_locations, get_xdg_config_save_path, \
