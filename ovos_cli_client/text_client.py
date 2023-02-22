@@ -41,7 +41,6 @@ bSimple = False
 bus = None  # Mycroft messagebus connection
 config = Configuration()
 config_file = None  # mycroft_cli.conf
-event_thread = None
 history = []
 chat = []  # chat history, oldest at the lowest index
 line = ""
@@ -158,7 +157,7 @@ def connect_to_mycroft():
         Sets the bus and config global variables
     """
     global bus
-    bus = connect_to_messagebus()
+    bus = MessageBusClient()  # Mycroft messagebus connection
     Configuration.set_config_update_handlers(bus)
 
 
@@ -1319,6 +1318,8 @@ def gui_main(stdscr):
 
     add_log_message("Establishing Mycroft Messagebus connection...")
 
+    bus.run_in_thread()
+
     gui_thread = ScreenDrawThread()
     gui_thread.setDaemon(True)  # this thread won't prevent prog from exiting
     gui_thread.start()
@@ -1518,6 +1519,8 @@ def simple_cli():
     bSimple = True
 
     bus.on('speak', handle_speak)
+    bus.run_in_thread()
+
     try:
         while True:
             # Sleep for a while so all the output that results
@@ -1535,19 +1538,5 @@ def simple_cli():
         print("")
     except KeyboardInterrupt as e:
         LOG.exception(e)
-        event_thread.exit()
         sys.exit()
 
-
-def connect_to_messagebus():
-    """ Connect to the mycroft messagebus and launch a thread handling the
-        connection.
-
-        Returns: WebsocketClient
-    """
-    bus = MessageBusClient()  # Mycroft messagebus connection
-
-    event_thread = Thread(target=connect, args=[bus])
-    event_thread.setDaemon(True)
-    event_thread.start()
-    return bus
