@@ -1318,7 +1318,7 @@ def gui_main(stdscr):
 
     add_log_message("Establishing Mycroft Messagebus connection...")
 
-    connect_to_messagebus()
+    bus.run_in_thread()
 
     gui_thread = ScreenDrawThread()
     gui_thread.setDaemon(True)  # this thread won't prevent prog from exiting
@@ -1519,7 +1519,7 @@ def simple_cli():
     bSimple = True
 
     bus.on('speak', handle_speak)
-    connect_to_messagebus()
+    bus.run_in_thread()
 
     try:
         while True:
@@ -1540,15 +1540,3 @@ def simple_cli():
         LOG.exception(e)
         sys.exit()
 
-
-def connect_to_messagebus():
-    """ Connect to the mycroft messagebus and launch a thread handling the
-        connection.
-
-        Returns: WebsocketClient
-    """
-    global bus
-
-    event_thread = Thread(target=connect, args=[bus])
-    event_thread.setDaemon(True)
-    event_thread.start()
