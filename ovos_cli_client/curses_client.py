@@ -800,6 +800,7 @@ class TUI:
     history = []
     chat = []  # chat history, oldest at the lowest index
 
+    screen = ScreenDrawThread()
     show_meter = True  # Values used to display the audio meter
     cy_chat_area = 7  # default chat history height (in lines)
     show_last_key = False
@@ -890,31 +891,31 @@ class TUI:
         utterance = event.data.get('utterance')
         utterance = TTS.remove_ssml(utterance)
         cls.chat.append(">> " + utterance)
-        ScreenDrawThread.set_screen_dirty()
+        cls.screen.set_screen_dirty()
 
     @classmethod
     def handle_utterance(cls, event):
         utterance = event.data.get('utterances')[0]
         cls.history.append(utterance)
         cls.chat.append(utterance)
-        ScreenDrawThread.set_screen_dirty()
+        cls.screen.set_screen_dirty()
 
     ##############################################################################
     # Skill debugging
     @classmethod
     def show_skills(cls, skills):
         """Show list of loaded Skills in as many column as necessary."""
-        ScreenDrawThread.screen_mode = ScreenDrawThread.SCR_SKILLS
+        cls.screen.screen_mode = ScreenDrawThread.SCR_SKILLS
 
         row = 2
         column = 0
-        scr = ScreenDrawThread.scr
+        scr = cls.screen.scr
 
         def prepare_page():
             nonlocal row
             nonlocal column
             scr.erase()
-            scr.addstr(0, 0, ScreenDrawThread.center(25) + "Loaded Skills", ScreenDrawThread.CLR_CMDLINE)
+            scr.addstr(0, 0, cls.screen.center(25) + "Loaded Skills", ScreenDrawThread.CLR_CMDLINE)
             scr.addstr(1, 1, "=" * (curses.COLS - 2), ScreenDrawThread.CLR_CMDLINE)
             row = 2
             column = 0
@@ -934,7 +935,7 @@ class TUI:
             if row == curses.LINES - 2 and column > 0 and skill != skill_names[-1]:
                 column = 0
                 scr.addstr(curses.LINES - 1, 0,
-                           ScreenDrawThread.center(23) + "Press any key to continue", ScreenDrawThread.CLR_HEADING)
+                           cls.screen.center(23) + "Press any key to continue", ScreenDrawThread.CLR_HEADING)
                 scr.refresh()
                 cls.wait_for_any_key()
                 prepare_page()
@@ -948,16 +949,16 @@ class TUI:
                     # End of screen
                     break
 
-        scr.addstr(curses.LINES - 1, 0, ScreenDrawThread.center(23) + "Press any key to return",
+        scr.addstr(curses.LINES - 1, 0, cls.screen.center(23) + "Press any key to return",
                    ScreenDrawThread.CLR_HEADING)
         scr.refresh()
 
     @classmethod
     def show_skill_api(cls, skill, data):
         """Show available help on Skill's API."""
-        scr = ScreenDrawThread.scr
+        scr = cls.screen.scr
 
-        ScreenDrawThread.screen_mode = ScreenDrawThread.SCR_SKILLS
+        cls.screen.screen_mode = ScreenDrawThread.SCR_SKILLS
 
         row = 2
         column = 0
@@ -966,7 +967,7 @@ class TUI:
             nonlocal row
             nonlocal column
             scr.erase()
-            scr.addstr(0, 0, ScreenDrawThread.center(25) + "Skill-API for {}".format(skill),
+            scr.addstr(0, 0, cls.screen.center(25) + "Skill-API for {}".format(skill),
                        ScreenDrawThread.CLR_CMDLINE)
             scr.addstr(1, 1, "=" * (curses.COLS - 2), ScreenDrawThread.CLR_CMDLINE)
             row = 2
@@ -990,7 +991,7 @@ class TUI:
 
             if row == curses.LINES - 5:
                 scr.addstr(curses.LINES - 1, 0,
-                           ScreenDrawThread.center(23) + "Press any key to continue", ScreenDrawThread.CLR_HEADING)
+                           cls.screen.center(23) + "Press any key to continue", ScreenDrawThread.CLR_HEADING)
                 scr.refresh()
                 cls.wait_for_any_key()
                 prepare_page()
@@ -999,7 +1000,7 @@ class TUI:
                 # New column
                 row = 2
 
-        scr.addstr(curses.LINES - 1, 0, ScreenDrawThread.center(23) + "Press any key to return",
+        scr.addstr(curses.LINES - 1, 0, cls.screen.center(23) + "Press any key to return",
                    ScreenDrawThread.CLR_HEADING)
         scr.refresh()
 
@@ -1026,15 +1027,15 @@ class TUI:
             parts = cmd.split(" ")
             return parts[-1]
 
-    @staticmethod
-    def wait_for_any_key():
+    @classmethod
+    def wait_for_any_key(cls):
         """Block until key is pressed.
 
         This works around curses.error that can occur on old versions of ncurses.
         """
         while True:
             try:
-                ScreenDrawThread.scr.get_wch()  # blocks
+                cls.screen.scr.get_wch()  # blocks
             except curses.error:
                 # Loop if get_wch throws error
                 time.sleep(0.05)
@@ -1046,7 +1047,7 @@ class TUI:
         if "show" in cmd and "log" in cmd:
             pass
         elif "help" in cmd:
-            ScreenDrawThread.show_help()
+            cls.screen.show_help()
         elif "exit" in cmd or "quit" in cmd:
             return 1
         elif "keycode" in cmd:
@@ -1114,8 +1115,8 @@ class TUI:
                 cls.show_skills(message.data)
                 cls.wait_for_any_key()
 
-                ScreenDrawThread.screen_mode = ScreenDrawThread.SCR_MAIN
-                ScreenDrawThread.set_screen_dirty()
+                cls.screen.screen_mode = ScreenDrawThread.SCR_MAIN
+                cls.screen.set_screen_dirty()
         elif "deactivate" in cmd:
             skills = cmd.split()[1:]
             if len(skills) > 0:
@@ -1145,9 +1146,9 @@ class TUI:
             message = cls.bus.wait_for_response(Message('{}.public_api'.format(skill)))
             if message:
                 cls.show_skill_api(skill, message.data)
-                ScreenDrawThread.scr.get_wch()  # blocks
-                ScreenDrawThread.screen_mode = ScreenDrawThread.SCR_MAIN
-                ScreenDrawThread.set_screen_dirty()
+                cls.screen.scr.get_wch()  # blocks
+                cls.screen.screen_mode = ScreenDrawThread.SCR_MAIN
+                cls.screen.set_screen_dirty()
 
         # TODO: More commands
         return 0  # do nothing upon return
@@ -1162,12 +1163,11 @@ class TUI:
 
     @classmethod
     def run(cls, stdscr):
-        ScreenDrawThread.scr = stdscr
-        screen = ScreenDrawThread()
-        screen.init_screen()
-        screen.scr.keypad(1)
-        screen.scr.notimeout(True)
-        screen.start()
+        cls.screen.scr = stdscr
+        cls.screen.init_screen()
+        cls.screen.scr.keypad(1)
+        cls.screen.scr.notimeout(True)
+        cls.screen.start()
 
         cls.bus.on('speak', cls.handle_speak)
         cls.bus.on('recognizer_loop:utterance', cls.handle_utterance)
@@ -1180,7 +1180,7 @@ class TUI:
         c = 0
         try:
             while True:
-                screen.set_screen_dirty()
+                cls.screen.set_screen_dirty()
                 c = 0
                 code = 0
 
@@ -1191,8 +1191,8 @@ class TUI:
                     else:
                         # Don't block, this allows us to refresh the screen while
                         # waiting on initial messagebus connection, etc
-                        screen.scr.timeout(1)
-                        c = screen.scr.get_wch()  # unicode char or int for special keys
+                        cls.screen.scr.timeout(1)
+                        c = cls.screen.scr.get_wch()  # unicode char or int for special keys
                         if c == -1:
                             continue
                 except curses.error:
@@ -1211,18 +1211,18 @@ class TUI:
                     # if we draw to the screen while doing a scr.getch().  So
                     # lock screen updates until the VT100 sequence has been
                     # completely read.
-                    with screen.screen_lock:
-                        screen.scr.timeout(0)
+                    with cls.screen.screen_lock:
+                        cls.screen.scr.timeout(0)
                         c1 = -1
                         start = time.time()
                         while c1 == -1:
-                            c1 = screen.scr.getch()
+                            c1 = cls.screen.scr.getch()
                             if time.time() - start > 1:
                                 break  # 1 second timeout waiting for ESC code
 
                         c2 = -1
                         while c2 == -1:
-                            c2 = screen.scr.getch()
+                            c2 = cls.screen.scr.getch()
                             if time.time() - start > 1:  # 1 second timeout
                                 break  # 1 second timeout waiting for ESC code
 
@@ -1256,56 +1256,56 @@ class TUI:
                     else:
                         cls.last_key = str(code)
 
-                screen.scr.timeout(-1)  # resume blocking
+                cls.screen.scr.timeout(-1)  # resume blocking
                 if code == 27:  # Hitting ESC twice clears the entry line
                     hist_idx = -1
-                    screen.line = ""
+                    cls.screen.line = ""
                 elif c == curses.KEY_RESIZE:
                     # Generated by Curses when window/screen has been resized
-                    y, x = screen.scr.getmaxyx()
+                    y, x = cls.screen.scr.getmaxyx()
                     curses.resizeterm(y, x)
 
                     # resizeterm() causes another curses.KEY_RESIZE, so
                     # we need to capture that to prevent a loop of resizes
-                    c = screen.scr.get_wch()
-                elif screen.screen_mode == screen.SCR_HELP:
+                    c = cls.screen.scr.get_wch()
+                elif cls.screen.screen_mode == screen.SCR_HELP:
                     # in Help mode, any key goes to next page
-                    screen.show_next_help()
+                    cls.screen.show_next_help()
                     continue
                 elif c == '\n' or code == 10 or code == 13 or code == 343:
                     # ENTER sends the typed line to be processed by Mycroft
-                    if screen.line == "":
+                    if cls.screen.line == "":
                         continue
 
-                    if screen.line[:1] == ":":
+                    if cls.screen.line[:1] == ":":
                         # Lines typed like ":help" are 'commands'
-                        if cls.handle_cmd(screen.line[1:]) == 1:
+                        if cls.handle_cmd(cls.screen.line[1:]) == 1:
                             break
                     else:
                         # Treat this as an utterance
                         cls.bus.emit(Message("recognizer_loop:utterance",
-                                             {'utterances': [screen.line.strip()],
+                                             {'utterances': [cls.screen.line.strip()],
                                               'lang': cls.config.get('lang', 'en-us')},
                                              {'client_name': 'mycroft_cli',
                                               'source': 'debug_cli',
                                               'destination': ["skills"]}
                                              ))
                     hist_idx = -1
-                    screen.line = ""
+                    cls.screen.line = ""
                 elif code == 16 or code == 545:  # Ctrl+P or Ctrl+Left (Previous)
                     # Move up the history stack
-                    hist_idx = screen.clamp(hist_idx + 1, -1, len(cls.history) - 1)
+                    hist_idx = cls.screen.clamp(hist_idx + 1, -1, len(cls.history) - 1)
                     if hist_idx >= 0:
-                        screen.line = cls.history[len(cls.history) - hist_idx - 1]
+                        cls.screen.line = cls.history[len(cls.history) - hist_idx - 1]
                     else:
-                        screen.line = ""
+                        cls.screen.line = ""
                 elif code == 14 or code == 560:  # Ctrl+N or Ctrl+Right (Next)
                     # Move down the history stack
-                    hist_idx = screen.clamp(hist_idx - 1, -1, len(cls.history) - 1)
+                    hist_idx = cls.screen.clamp(hist_idx - 1, -1, len(cls.history) - 1)
                     if hist_idx >= 0:
-                        screen.line = cls.history[len(cls.history) - hist_idx - 1]
+                        cls.screen.line = cls.history[len(cls.history) - hist_idx - 1]
                     else:
-                        screen.line = ""
+                        cls.screen.line = ""
                 elif c == curses.KEY_LEFT:
                     # scroll long log lines left
                     cls.log_line_lr_scroll += curses.COLS // 4
@@ -1316,54 +1316,54 @@ class TUI:
                         cls.log_line_lr_scroll = 0
                 elif c == curses.KEY_HOME:
                     # HOME scrolls log lines all the way to the start
-                    cls.log_line_lr_scroll = screen.longest_visible_line
+                    cls.log_line_lr_scroll = cls.screen.longest_visible_line
                 elif c == curses.KEY_END:
                     # END scrolls log lines all the way to the end
                     cls.log_line_lr_scroll = 0
                 elif c == curses.KEY_UP:
-                    screen.scroll_log(False, 1)
+                    cls.screen.scroll_log(False, 1)
                 elif c == curses.KEY_DOWN:
-                    screen.scroll_log(True, 1)
+                    cls.screen.scroll_log(True, 1)
                 elif c == curses.KEY_NPAGE:  # aka PgDn
                     # PgDn to go down a page in the logs
-                    screen.scroll_log(True)
+                    cls.screen.scroll_log(True)
                 elif c == curses.KEY_PPAGE:  # aka PgUp
                     # PgUp to go up a page in the logs
-                    screen.scroll_log(False)
+                    cls.screen.scroll_log(False)
                 elif code == 2 or code == 550:  # Ctrl+B or Ctrl+PgDn
-                    screen.scroll_log(True, LogMonitorThread.max_log_lines)
+                    cls.screen.scroll_log(True, LogMonitorThread.max_log_lines)
                 elif code == 20 or code == 555:  # Ctrl+T or Ctrl+PgUp
-                    screen.scroll_log(False, LogMonitorThread.max_log_lines)
+                    cls.screen.scroll_log(False, LogMonitorThread.max_log_lines)
                 elif code == curses.KEY_BACKSPACE or code == 127:
                     # Backspace to erase a character in the utterance
-                    screen.line = screen.line[:-1]
+                    cls.screen.line = cls.screen.line[:-1]
                 elif code == 6:  # Ctrl+F (Find)
-                    screen.line = ":find "
+                    cls.screen.line = ":find "
                 elif code == 7:  # Ctrl+G (start GUI)
                     if cls.show_gui is None:
-                        start_qml_gui(cls.bus, screen.tui_text)
+                        start_qml_gui(cls.bus, cls.screen.tui_text)
                     cls.show_gui = not cls.show_gui
                 elif code == 18:  # Ctrl+R (Redraw)
-                    screen.scr.erase()
+                    cls.screen.scr.erase()
                 elif code == 24:  # Ctrl+X (Exit)
                     if LogMonitorThread.find_str:
                         # End the find session
                         find_str = None
                         LogMonitorThread.rebuild_filtered_log()
-                    elif screen.line.startswith(":"):
+                    elif cls.screen.line.startswith(":"):
                         # cancel command mode
-                        screen.line = ""
+                        cls.screen.line = ""
                     else:
                         # exit CLI
                         break
                 elif code > 31 and isinstance(c, str):
                     # Accept typed character in the utterance
-                    screen.line += c
+                    cls.screen.line += c
 
         finally:
-            screen.scr.erase()
-            screen.scr.refresh()
-            screen.scr = None
+            cls.screen.scr.erase()
+            cls.screen.scr.refresh()
+            cls.screen.scr = None
 
 
 def launch_curses_tui(bus):

@@ -21,7 +21,8 @@ from ovos_cli_client.curses_client import launch_curses_tui
 from ovos_cli_client.text_client import launch_simple_cli
 
 
-def main(simple):
+def main():
+    simple = '--simple' in sys.argv
     bus = MessageBusClient()
 
     def launch(_):
@@ -47,4 +48,4 @@ def main(simple):
 
 
 if __name__ == "__main__":
-    main('--simple' in sys.argv)
+    main()
