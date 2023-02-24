@@ -1268,7 +1268,7 @@ class TUI:
                     # resizeterm() causes another curses.KEY_RESIZE, so
                     # we need to capture that to prevent a loop of resizes
                     c = cls.screen.scr.get_wch()
-                elif cls.screen.screen_mode == screen.SCR_HELP:
+                elif cls.screen.screen_mode == cls.screen.SCR_HELP:
                     # in Help mode, any key goes to next page
                     cls.screen.show_next_help()
                     continue
