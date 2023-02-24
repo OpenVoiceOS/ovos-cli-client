@@ -1302,18 +1302,18 @@ class TUI:
                         ScreenDrawThread.line = ""
                 elif c == curses.KEY_LEFT:
                     # scroll long log lines left
-                    cls.log_line_lr_scroll += curses.COLS // 4
+                    ScreenDrawThread.log_line_lr_scroll += curses.COLS // 4
                 elif c == curses.KEY_RIGHT:
                     # scroll long log lines right
-                    cls.log_line_lr_scroll -= curses.COLS // 4
-                    if cls.log_line_lr_scroll < 0:
-                        cls.log_line_lr_scroll = 0
+                    ScreenDrawThread.log_line_lr_scroll -= curses.COLS // 4
+                    if ScreenDrawThread.log_line_lr_scroll < 0:
+                        ScreenDrawThread.log_line_lr_scroll = 0
                 elif c == curses.KEY_HOME:
                     # HOME scrolls log lines all the way to the start
-                    cls.log_line_lr_scroll = ScreenDrawThread.longest_visible_line
+                    ScreenDrawThread.log_line_lr_scroll = ScreenDrawThread.longest_visible_line
                 elif c == curses.KEY_END:
                     # END scrolls log lines all the way to the end
-                    cls.log_line_lr_scroll = 0
+                    ScreenDrawThread.log_line_lr_scroll = 0
                 elif c == curses.KEY_UP:
                     ScreenDrawThread.scroll_log(False, 1)
                 elif c == curses.KEY_DOWN:
