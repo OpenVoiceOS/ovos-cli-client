@@ -24,27 +24,24 @@ from ovos_cli_client.text_client import launch_simple_cli
 def main():
     simple = '--simple' in sys.argv
     bus = MessageBusClient()
+    bus.run_in_thread()
 
-    def launch(_):
-        if simple:
-            launch_simple_cli(bus)
-        else:
+    if simple:
+        launch_simple_cli(bus)
+    else:
 
-            sys.stdout = io.StringIO()
-            sys.stderr = io.StringIO()
+        sys.stdout = io.StringIO()
+        sys.stderr = io.StringIO()
 
-            def custom_except_hook(exctype, value, traceback):
-                print(sys.stdout.getvalue(), file=sys.__stdout__)
-                print(sys.stderr.getvalue(), file=sys.__stderr__)
-                sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
-                sys.__excepthook__(exctype, value, traceback)
+        def custom_except_hook(exctype, value, traceback):
+            print(sys.stdout.getvalue(), file=sys.__stdout__)
+            print(sys.stderr.getvalue(), file=sys.__stderr__)
+            sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
+            sys.__excepthook__(exctype, value, traceback)
 
-            sys.excepthook = custom_except_hook  # noqa
+        sys.excepthook = custom_except_hook  # noqa
 
-            launch_curses_tui(bus)
-
-    bus.once("connected", launch)
-    bus.run_forever()
+        launch_curses_tui(bus)
 
 
 if __name__ == "__main__":

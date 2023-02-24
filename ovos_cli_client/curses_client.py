@@ -126,8 +126,8 @@ class LogMonitorThread(Thread):
             cls.filteredLog.append(message)
             cls.mergedLog.append(message)
 
-            if TUI.log_line_offset != 0:
-                TUI.log_line_offset = 0  # scroll so the user can see the message
+            if ScreenDrawThread.log_line_offset != 0:
+                ScreenDrawThread.log_line_offset = 0  # scroll so the user can see the message
         ScreenDrawThread.set_screen_dirty()
 
     @classmethod
@@ -135,7 +135,7 @@ class LogMonitorThread(Thread):
         with cls.log_lock:
             cls.mergedLog = []
             cls.filteredLog = []
-            TUI.log_line_offset = 0
+            ScreenDrawThread.log_line_offset = 0
 
     @classmethod
     def rebuild_filtered_log(cls):
