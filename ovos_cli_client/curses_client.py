@@ -1341,7 +1341,7 @@ class TUI:
                 elif code == 24:  # Ctrl+X (Exit)
                     if LogMonitorThread.find_str:
                         # End the find session
-                        find_str = None
+                        LogMonitorThread.find_str = None
                         LogMonitorThread.rebuild_filtered_log()
                     elif cls.screen.line.startswith(":"):
                         # cancel command mode
