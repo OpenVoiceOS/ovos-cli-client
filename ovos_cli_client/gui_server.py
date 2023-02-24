@@ -13,13 +13,13 @@
 # limitations under the License.
 #
 
-import json
 from os import getpid
 from os.path import basename
-from threading import Thread
 
+import json
 import websocket
 from mycroft_bus_client import Message
+from threading import Thread
 
 bus = None
 buffer = None  # content will show on the CLI "GUI" representation

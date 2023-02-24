@@ -13,7 +13,17 @@
 # limitations under the License.
 #
 import os.path
-from os.path import isfile
+from os.path import isfile, exists
+
+import curses
+import io
+import signal
+import sys
+from ovos_config import Configuration
+from ovos_config.meta import get_xdg_base
+from ovos_utils.log import LOG
+from ovos_utils.signal import get_ipc_directory
+from ovos_utils.xdg_utils import xdg_state_home
 
 import curses
 import io
@@ -23,7 +33,7 @@ import os
 import textwrap
 import time
 from math import ceil
-from mycroft_bus_client import Message
+from mycroft_bus_client import Message, MessageBusClient
 from ovos_config.config import get_xdg_config_locations, get_xdg_config_save_path, Configuration
 from ovos_plugin_manager.templates.tts import TTS
 from ovos_utils.log import LOG
@@ -91,13 +101,10 @@ class LogMonitorThread(Thread):
                     if ignore:
                         self.mergedLog.append(self.logid + line.rstrip())
                     else:
-                        if TUI.bSimple:
-                            print(line.rstrip())
-                        else:
-                            self.filteredLog.append(self.logid + line.rstrip())
-                            self.mergedLog.append(self.logid + line.rstrip())
-                            if not ScreenDrawThread.auto_scroll:
-                                ScreenDrawThread.log_line_offset += 1
+                        self.filteredLog.append(self.logid + line.rstrip())
+                        self.mergedLog.append(self.logid + line.rstrip())
+                        if not ScreenDrawThread.auto_scroll:
+                            ScreenDrawThread.log_line_offset += 1
 
         # Limit log to  max_log_lines
         if len(self.mergedLog) >= self.max_log_lines:
@@ -786,7 +793,6 @@ class TUI:
     locale.setlocale(locale.LC_ALL, "")  # Set LC_ALL to user default
     preferred_encoding = locale.getpreferredencoding()
 
-    bSimple = False
     bus = None  # Mycroft messagebus connection
     config = Configuration()
     config_file = None  # mycroft_cli.conf
@@ -800,6 +806,13 @@ class TUI:
 
     # Allow Ctrl+C catching...
     ctrl_c_was_pressed = False
+
+    @classmethod
+    def bind(cls, bus=None):
+        if not bus:
+            bus = MessageBusClient()
+            bus.run_in_thread()
+        cls.bus = bus
 
     @classmethod
     def ctrl_c_handler(cls, signum, frame):
@@ -876,10 +889,7 @@ class TUI:
     def handle_speak(cls, event):
         utterance = event.data.get('utterance')
         utterance = TTS.remove_ssml(utterance)
-        if cls.bSimple:
-            print(">> " + utterance)
-        else:
-            cls.chat.append(">> " + utterance)
+        cls.chat.append(">> " + utterance)
         ScreenDrawThread.set_screen_dirty()
 
     @classmethod
@@ -1151,7 +1161,7 @@ class TUI:
         LogMonitorThread.add_log_message("Looking for Messagebus websocket...")
 
     @classmethod
-    def tui_main(cls, stdscr):
+    def run(cls, stdscr):
         ScreenDrawThread.scr = stdscr
         screen = ScreenDrawThread()
         screen.init_screen()
@@ -1354,3 +1364,42 @@ class TUI:
             screen.scr.erase()
             screen.scr.refresh()
             screen.scr = None
+
+
+def launch_curses_tui(bus):
+
+    TUI.bind(bus)
+
+    # Monitor system logs
+    config = Configuration()
+
+    legacy_path = "/var/log/mycroft"
+
+    if 'log_dir' not in config:
+        config["log_dir"] = f"{xdg_state_home()}/{get_xdg_base()}"
+
+    log_dir = os.path.expanduser(config['log_dir'])
+    for f in os.listdir(log_dir):
+        if not f.endswith(".log"):
+            continue
+        start_log_monitor(os.path.join(log_dir, f))
+
+    # also monitor legacy path for compat
+    if log_dir != legacy_path and exists(legacy_path):
+        LOG.warning(
+            f"this installation seems to also contain logs in the legacy directory {legacy_path}, "
+            f"please start using {log_dir}")
+        for f in os.listdir(legacy_path):
+            if not f.endswith(".log"):
+                continue
+            start_log_monitor(os.path.join(legacy_path, f))
+
+    # Monitor IPC file containing microphone level info
+    start_mic_monitor(os.path.join(get_ipc_directory(), "mic_level"))
+
+    # Special signal handler allows a clean shutdown of the GUI
+    signal.signal(signal.SIGINT, TUI.ctrl_c_handler)
+    TUI.load_settings()
+    curses.wrapper(TUI.run)
+    curses.endwin()
+    TUI.save_settings()
