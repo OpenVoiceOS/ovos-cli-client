@@ -12,32 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os.path
-from os.path import isfile, exists
-
-import curses
-import io
-import signal
-import sys
-from ovos_config import Configuration
-from ovos_config.meta import get_xdg_base
-from ovos_utils.log import LOG
-from ovos_utils.signal import get_ipc_directory
-from ovos_utils.xdg_utils import xdg_state_home
-
 import curses
 import io
 import json
 import locale
 import os
+import os.path
+import signal
 import textwrap
+from os.path import isfile, exists
+from threading import Thread, Lock
+
 import time
 from math import ceil
 from mycroft_bus_client import Message, MessageBusClient
 from ovos_config.config import get_xdg_config_locations, get_xdg_config_save_path, Configuration
+from ovos_config.meta import get_xdg_base
 from ovos_plugin_manager.templates.tts import TTS
-from ovos_utils.log import LOG
-from threading import Thread, Lock
+from ovos_utils.signal import get_ipc_directory
+from ovos_utils.xdg_utils import xdg_state_home
 
 from ovos_cli_client.gui_server import start_qml_gui
 
@@ -802,7 +795,7 @@ class TUI:
 
     screen = ScreenDrawThread()
     show_meter = True  # Values used to display the audio meter
-    cy_chat_area = 7  # default chat history height (in lines)
+    cy_chat_area = 10  # default chat history height (in lines)
     show_last_key = False
 
     # Allow Ctrl+C catching...
@@ -870,7 +863,7 @@ class TUI:
             if "show_meter" in cls.config:
                 cls.show_meter = cls.config["show_meter"]
         except Exception as e:
-            LOG.info("Ignoring failed load of settings file")
+            LogMonitorThread.add_log_message("Ignoring failed load of settings file")
 
     @classmethod
     def save_settings(cls):
@@ -1367,7 +1360,6 @@ class TUI:
 
 
 def launch_curses_tui(bus):
-
     TUI.bind(bus)
 
     # Monitor system logs
@@ -1386,7 +1378,7 @@ def launch_curses_tui(bus):
 
     # also monitor legacy path for compat
     if log_dir != legacy_path and exists(legacy_path):
-        LOG.warning(
+        LogMonitorThread.add_log_message(
             f"this installation seems to also contain logs in the legacy directory {legacy_path}, "
             f"please start using {log_dir}")
         for f in os.listdir(legacy_path):
