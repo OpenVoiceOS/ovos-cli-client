@@ -19,7 +19,7 @@ from os.path import basename
 from threading import Thread
 
 import websocket
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 
 bus = None
 buffer = None  # content will show on the CLI "GUI" representation

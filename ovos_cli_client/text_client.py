@@ -25,7 +25,7 @@ from math import ceil
 from os.path import isfile
 from threading import Thread, Lock
 
-from mycroft_bus_client import MessageBusClient, Message
+from ovos_bus_client import MessageBusClient, Message
 from ovos_config.config import get_xdg_config_locations, get_xdg_config_save_path, Configuration
 from ovos_plugin_manager.templates.tts import TTS
 from ovos_utils.log import LOG
